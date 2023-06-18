@@ -19,7 +19,7 @@ package com.example.camerax_mlkit
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.View
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.mlkit.vision.MlKitAnalyzer
@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         val previewView: PreviewView = viewBinding.viewFinder
 
         val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE, Barcode.FORMAT_CODE_128)
             .build()
         barcodeScanner = BarcodeScanning.getClient(options)
 
@@ -83,13 +83,23 @@ class MainActivity : AppCompatActivity() {
                     previewView.setOnTouchListener { _, _ -> false } //no-op
                     return@MlKitAnalyzer
                 }
+                Log.w("angcyo:${barcodeResults.size}", "$barcodeResults")
 
-                val qrCodeViewModel = QrCodeViewModel(barcodeResults[0])
+                previewView.overlay.clear()
+                for ((index, barcode) in barcodeResults.withIndex()) {
+                    Log.w("angcyo:${index}:${barcode.format}", "${barcode.rawValue}")
+
+                    val qrCodeViewModel = QrCodeViewModel(barcode)
+                    val qrCodeDrawable = QrCodeDrawable(qrCodeViewModel)
+                    previewView.overlay.add(qrCodeDrawable)
+                }
+
+                /*val qrCodeViewModel = QrCodeViewModel(barcodeResults[0])
                 val qrCodeDrawable = QrCodeDrawable(qrCodeViewModel)
 
                 previewView.setOnTouchListener(qrCodeViewModel.qrCodeTouchCallback)
                 previewView.overlay.clear()
-                previewView.overlay.add(qrCodeDrawable)
+                previewView.overlay.add(qrCodeDrawable)*/
             }
         )
 
@@ -99,7 +109,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
-            baseContext, it) == PackageManager.PERMISSION_GRANTED
+            baseContext, it
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     override fun onDestroy() {
@@ -112,22 +123,25 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "CameraX-MLKit"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
-            mutableListOf (
+            mutableListOf(
                 Manifest.permission.CAMERA
             ).toTypedArray()
     }
 
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults:
-        IntArray) {
+        IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(this,
+                Toast.makeText(
+                    this,
                     "Permissions not granted by the user.",
-                    Toast.LENGTH_SHORT).show()
+                    Toast.LENGTH_SHORT
+                ).show()
                 finish()
             }
         }
